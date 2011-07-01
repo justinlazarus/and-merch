@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Item Dashboard</string>
+    <string name="app_label">Item Dashboard</string>
+    <string name="search_hint">Please enter an item</string>
+    <style name="TableHeader" parent="@android:style/TextAppearance.Medium"></style>
+    <style name="FilterEditText">
+    	<item name="android:inputType">number</item>
+    	<item name="android:textSize">30sp</item>"
+    </style>
+    <style name="FilterLabelText">
+    	<item name="android:textSize">30sp</item>"
+    </style>
+    <style name="daily_sales_unit">
+    	<item name="android:textSize">20sp</item>
+    	<item name="android:padding">5dip</item>
+    	<item name="android:layout_width">100dip</item>
+    	<item name="android:layout_height">wrap_content</item>
+    </style>
+</resources>
