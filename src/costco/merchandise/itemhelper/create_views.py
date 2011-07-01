@@ -3,33 +3,49 @@ import math
 import inspect
 import pdb
 
-DB_LOCATION = '/home/justin/merch/sales.db'
-
 class TableBuilder: 
     def __init__(self):
-        self.con = sqlite3.connect(DB_LOCATION)
+        self.con = sqlite3.connect(settings.DB_LOCATION)
         self.cur = self.con.cursor()
    
-    def build(self, name, select, udf_list = [], aggregate_list = []):
+    def build(self, name, view_group, select, udf_list = [], agg_list = []):
         for udf in udf_list:
             num_args = len(inspect.getargspec(udf)[0])
             self.con.create_function(udf.__name__.lower(), num_args, udf)
                 
-        for agg in aggregate_list:
+        for agg in agg_list:
             num_args = len(inspect.getargspec(agg.step)[0]) - 1
             self.con.create_aggregate(agg.__name__.lower(), num_args, agg)
 
         self.cur.execute('drop table if exists %s' % (name))
         self.cur.execute('create table %s as %s' % (name, select))
+        ViewSummary().add(name, view_group)
 
 class ViewBuilder:
     def __init__(self):
-        self.con = sqlite3.connect(DB_LOCATION)
+        self.con = sqlite3.connect(settings.DB_LOCATION)
         self.cur = self.con.cursor()
  
-    def build(self, name, select):
+    def build(self, name, view_group, select):
         self.cur.execute('drop view if exists %s' % (name))
         self.cur.execute('create view %s as %s' % (name, select))
+        ViewSummary().add(name, view_group)
+   
+class ViewSummary:
+    def __init__(self):
+        self.con = sqlite3.connect(settings.DB_LOCATION)
+        self.cur = self.con.cursor()
+
+        self.cur.execute(
+            'create table if not exists available_views \
+             (_id int primary key autoincrement not null, name text, type text)'
+        )
+
+    def add(self, view_name, view_type):
+        self.cur.execute(
+            'insert into available views (name, type) values (%s, %s)' %
+             (view_name, view_type)
+        ) 
 
 class AdjustedAverage:
     """ Implements the adjustedaverage sqlite user defined ag function.
