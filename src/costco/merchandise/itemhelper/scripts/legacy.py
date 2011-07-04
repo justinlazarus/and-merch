@@ -2,7 +2,6 @@ import settings
 import csv
 import codecs
 import sqlite3
-import pdb
 
 class Table:
     """ A table ripped directly from the iSeries DB2 database via .csv
@@ -40,10 +39,9 @@ class Table:
 
     def exists(self):
         """ Returns True if table exists, false otherwise. """ 
-        cur = self.con.execute(
+        if self.con.execute(
             "select name from sqlite_master where name='%s'" % (self.table_name)
-        )
-        if cur.fetchall():
+        ).fetchone():
             return True
         else:
             return False 
