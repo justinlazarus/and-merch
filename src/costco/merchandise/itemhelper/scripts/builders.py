@@ -7,9 +7,8 @@ class View:
     """ A view built on top of a legacy file. 
 
     This class is responsible for bringing together legacy table fields into
-    more usable formats. Though the resulting selections are not necessarily 
-    implemented as sql views, they are similar in nature as they are built on
-    top of the legacy tables. 
+    more usable formats. The fragments in the android application will be 
+    tied directly to these views.  
   
     """
     def __init__(
