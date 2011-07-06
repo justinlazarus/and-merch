@@ -1,21 +1,30 @@
 import math
 import sqlite3
 import settings
+import datetime
 
-class FiscalYear:
-    def __init__(self, fiscal_year):
-        self.con = sqlite3.connection(settings.DB_PATH)
-        self.start_date = self.con.execute(
-            "select start_date from fiscal_years where year = %s" %
-            (fiscal_year)
-        ).fetchone()
- 
-    def get_gregorian_date(self, fiscal_week, fiscal_day):
-        if (fiscal_week > 53 or fiscal_day > 7):
-            return None
-        return self.start_date + datetime.timedelta(
-            weeks=(abs(fiscal_week - 1)), days=(abs(fiscal_day - 1))
+def get_gregorian_date(fiscal_year_start, fiscal_week, day_of_week):
+    if (fiscal_week > 53 or day_of_week > 7):
+        return False
+    else:
+        start_date = datetime.datetime.strptime(
+            str(fiscal_year_start), "%Y%m%d"
         )
+        greg_date = start_date + datetime.timedelta(
+            weeks = (abs(fiscal_week - 1)), days = (abs(day_of_week - 1))
+        )
+        return int(greg_date.strftime('%Y%m%d'))
+
+def get_fiscal_period(fiscal_week):
+    if (fiscal_week < 1 or fiscal_week > 53):
+        return None 
+    elif fiscal_week == 53:
+        return 13
+    else:
+        return int(math.ceil(float(fiscal_week) / float(4)))
+
+def get_fiscal_quarter(fiscal_week):
+    return int(math.ceil(float(fiscal_week) / float(13)))
 
 class AdjustedAverage:
     """ Implements the adjustedaverage sqlite user defined ag function.

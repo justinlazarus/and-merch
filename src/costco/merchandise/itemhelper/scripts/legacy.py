@@ -31,6 +31,7 @@ class Table:
         sqlite table. 
 
         """
+        print('building table %s...' % self.table_name)
         self.con.execute('drop table if exists %s' % (self.table_name))
         self.fieldnames = self._get_fieldnames()
         self._create_table(self.csvreader.next())

@@ -1,7 +1,6 @@
 import builders
 import analysis
 
-# Drop and create the available views table
 builders.AvailableViews().drop()
 builders.AvailableViews().create()
 
@@ -20,6 +19,26 @@ builders.View(
     flper=1 and flweek=1 and flday=1'
 ).build()
 
+""" VIEW item_basics
+
+Basic information about our items including description, inventory on hand, 
+price and department. 
+
+"""
+builders.View(
+    'item_basics',
+    'item',
+    ['inwitmp', 'incatdp', 'inreptp',],
+    'select wiwhse whs, widept department, wiitem item, wiohun on_hand, \
+    wiohrt rtv_on_hand, wisell price, wistat status, idcat1 cat1, idcat2 \
+    cat2, idcat3 cat3, iddes1 description, iddes2 description2, \
+    idsgn1 sign_description, idsgn2 sign_description2, cddesc \
+    cat_description, irmpk master_pack, irwgt weight, ircube cube \
+    from inwitmp inner join incatdp on widept = cddept and idcat1 = cdcat1 \
+    and idcat2 = cdcat2 and idcat3 = cdcat3 inner join inreptp on \
+    wiitem = iritem and wiwhse = irwhse'
+).build()
+
 """ VIEW daily_sales 
 
 Packages the information in INDLYIP into a more usable format. Includes 
@@ -29,33 +48,68 @@ gregorian dates and the weekly total units sold.
 builders.View(
     'daily_sales',
     'item',
-    ['indlyip',],
-    'select rowid _id, saitem item, sawhse whs, safyr fyear, safwk fweek, \
-     samons m, satues t, saweds w, sathus th, safris f, sasats sa, sasuns su, \
-     (samons + satues + saweds + sathus + safris + sasats + sasuns) \
-     total_week from indlyip'  
+    ['indlyip', 'fiscal_years',],
+    'select indlyip.rowid _id, sawhse whs, saitem item, safyr fiscal_year, \
+     get_fiscal_quarter(safwk) fiscal_quarter, get_fiscal_period(safwk) \
+     fiscal_period, samons mon, satues tue, saweds wed, sathus thu, \
+     safris fri, sasats sat, sasuns sun, \
+     get_gregorian_date(start_date, safwk, 1) week_start_date \
+     from indlyip inner join fiscal_years on safyr=fiscal_year',  
+    [analysis.get_gregorian_date, analysis.get_fiscal_period, 
+        analysis.get_fiscal_quarter
+    ]
 ).build()
      
-""" VIEW average_daily_sales
+""" VIEWS daily_sales - average week by year, quarter, period
 
 Building off the daily_sales view, this view runs an aggregate function over a 
 grouping of the sales over the entire year. The results are a row for every 
 item in the daily_sales view. Each column in this row is the adjusted average
-sales for that day, or for the entire week in the case of the last column. 
-For more information on how the adjusted average function works, see 
-analysis.AdjustedAverage. 
+sales for that day. For more information on how the adjusted average function 
+works, see class AdjustedAverage in the analysis module. 
  
 """
 builders.View(
-    'average_daily_sales', 
+    'daily_sales_yearly_average', 
     'item',
     ['daily_sales',],
-    'select _id, item, whs, fyear, adjustedaverage(m) m, \
-     adjustedaverage(t) t, \
-     adjustedaverage(w) w, adjustedaverage(th) th, adjustedaverage(f) f, \
-     adjustedaverage(sa) sa, adjustedaverage(su) su, \
-     adjustedaverage(total_week) \
-     week from daily_sales group by item, whs, fyear',
+    'select _id, whs, item, fiscal_year, adjustedaverage(mon) mon, \
+     adjustedaverage(tue) tue, \
+     adjustedaverage(wed) wed, adjustedaverage(thu) thu, \
+     adjustedaverage(fri) fri, adjustedaverage(sat) sat, \
+     adjustedaverage(sun) sun \
+     from daily_sales group by item, whs, fiscal_year',
+    [],
+    [analysis.AdjustedAverage]
+).build()
+
+builders.View(
+    'daily_sales_quarterly_average', 
+    'item',
+    ['daily_sales',],
+    'select _id, whs, item, fiscal_year, fiscal_quarter, \
+     adjustedaverage(mon) mon, \
+     adjustedaverage(tue) tue, \
+     adjustedaverage(wed) wed, adjustedaverage(thu) thu, \
+     adjustedaverage(fri) fri, adjustedaverage(sat) sat, \
+     adjustedaverage(sun) sun \
+     from daily_sales group by whs, item, fiscal_year, fiscal_quarter',
+    [],
+    [analysis.AdjustedAverage]
+).build()
+
+builders.View(
+    'daily_sales_period_average', 
+    'item',
+    ['daily_sales',],
+    'select _id, whs, item, fiscal_year, fiscal_quarter, fiscal_period, \
+     adjustedaverage(mon) mon, \
+     adjustedaverage(tue) tue, \
+     adjustedaverage(wed) wed, adjustedaverage(thu) thu, \
+     adjustedaverage(fri) fri, adjustedaverage(sat) sat, \
+     adjustedaverage(sun) sun \
+     from daily_sales group by whs, item, fiscal_year, fiscal_quarter, \
+     fiscal_period',
     [],
     [analysis.AdjustedAverage]
 ).build()
@@ -76,8 +130,58 @@ builders.View(
     'item',
     ['inihstp',],
     ' '.join(
-        ['select ihwhse, ihfyr, %s ihfwk, ihdept, ihitem, ihs$%02d \
-        from inihstp union all' % (week, week) for week in range(1,53)]
-    ) + ' select ihwhse, ihfyr, 53 ihfwk, ihdept, ihitem, ihs$53 \
-        from inihstp'
+        ['select rowid _id, ihwhse whs, ihdept department, ihitem item, \
+        ihfyr fiscal_year, get_fiscal_quarter(%s) fiscal_quarter, \
+        get_fiscal_period(%s) fiscal_period, %s fiscal_week, \
+        ihs$%02d sales, ihsu%02d units \
+        from inihstp union all' % 
+        (week, week, week, week, week) for week in range(1,53)] 
+    ) + ' select rowid _id, ihwhse whs, ihdept department, ihitem item, \
+        ihfyr fiscal_year, get_fiscal_quarter(53) fiscal_quarter, \
+        get_fiscal_period(53) fiscal_period, 53 fiscal_week, ihs$53 sales, \
+        ihsu53 units \
+        from inihstp',
+        [analysis.get_fiscal_quarter, analysis.get_fiscal_period]
+).build()
+
+""" VIEWS - weekly sales yearly, quarterly and period averages.
+
+Average over the sales and unit values in the weekly_sales view. 
+
+"""
+builders.View(
+    'weekly_sales_yearly_average',
+    'item',
+    ['weekly_sales',],
+    'select _id, whs, item, fiscal_year, \
+    adjustedaverage(sales) average_sales, \
+    adjustedaverage(units) average_units \
+    from weekly_sales group by whs, item, fiscal_year',
+    [],
+    [analysis.AdjustedAverage]
+).build()
+
+builders.View(
+    'weekly_sales_quarterly_average',
+    'item',
+    ['weekly_sales',],
+    'select _id, whs, item, fiscal_year, fiscal_quarter, \
+    adjustedaverage(sales) average_sales, \
+    adjustedaverage(units) average_units \
+    from weekly_sales group by whs, item, fiscal_year, fiscal_quarter',
+    [],
+    [analysis.AdjustedAverage]
+).build()
+
+builders.View(
+    'weekly_sales_period_average',
+    'item',
+    ['weekly_sales',],
+    'select _id, whs, item, fiscal_year, fiscal_quarter, fiscal_period, \
+    adjustedaverage(sales) average_sales, \
+    adjustedaverage(units) average_units \
+    from weekly_sales group by whs, item, fiscal_year, fiscal_quarter, \
+    fiscal_period',
+    [],
+    [analysis.AdjustedAverage]
 ).build()
