@@ -11,7 +11,7 @@ INFLSHP. This file contains all sales information for every day in the
 region, so it also contains the start date of every fiscal year.
 
 """
-builders.View(
+builders.SimpleView(
     'fiscal_years',
     'flash',
     ['inflshp',],
@@ -25,7 +25,7 @@ Basic information about our items including description, inventory on hand,
 price and department. 
 
 """
-builders.View(
+builders.SimpleView(
     'item_basics',
     'item',
     ['inwitmp', 'incatdp', 'inreptp',],
@@ -45,7 +45,7 @@ Packages the information in INDLYIP into a more usable format. Includes
 gregorian dates and the weekly total units sold.
 
 """
-builders.View(
+builders.UdfView(
     'daily_sales',
     'item',
     ['indlyip', 'fiscal_years',],
@@ -69,7 +69,7 @@ sales for that day. For more information on how the adjusted average function
 works, see class AdjustedAverage in the analysis module. 
  
 """
-builders.View(
+builders.UdfView(
     'daily_sales_yearly_average', 
     'item',
     ['daily_sales',],
@@ -83,7 +83,7 @@ builders.View(
     [analysis.AdjustedAverage]
 ).build()
 
-builders.View(
+builders.UdfView(
     'daily_sales_quarterly_average', 
     'item',
     ['daily_sales',],
@@ -98,18 +98,17 @@ builders.View(
     [analysis.AdjustedAverage]
 ).build()
 
-builders.View(
+builders.UdfView(
     'daily_sales_period_average', 
     'item',
     ['daily_sales',],
-    'select _id, whs, item, fiscal_year, fiscal_quarter, fiscal_period, \
+    'select _id, whs, item, fiscal_year, fiscal_period, \
      adjustedaverage(mon) mon, \
      adjustedaverage(tue) tue, \
      adjustedaverage(wed) wed, adjustedaverage(thu) thu, \
      adjustedaverage(fri) fri, adjustedaverage(sat) sat, \
      adjustedaverage(sun) sun \
-     from daily_sales group by whs, item, fiscal_year, fiscal_quarter, \
-     fiscal_period',
+     from daily_sales group by whs, item, fiscal_year, fiscal_period',
     [],
     [analysis.AdjustedAverage]
 ).build()
@@ -125,7 +124,7 @@ sales data, such as adjusted average, that would not be possible on the
 legacy file. Piece of shit legacy files! 
 
 """
-builders.View(
+builders.UdfView(
     'weekly_sales',
     'item',
     ['inihstp',],
@@ -149,7 +148,7 @@ builders.View(
 Average over the sales and unit values in the weekly_sales view. 
 
 """
-builders.View(
+builders.UdfView(
     'weekly_sales_yearly_average',
     'item',
     ['weekly_sales',],
@@ -161,7 +160,7 @@ builders.View(
     [analysis.AdjustedAverage]
 ).build()
 
-builders.View(
+builders.UdfView(
     'weekly_sales_quarterly_average',
     'item',
     ['weekly_sales',],
@@ -173,15 +172,14 @@ builders.View(
     [analysis.AdjustedAverage]
 ).build()
 
-builders.View(
+builders.UdfView(
     'weekly_sales_period_average',
     'item',
     ['weekly_sales',],
     'select _id, whs, item, fiscal_year, fiscal_quarter, fiscal_period, \
     adjustedaverage(sales) average_sales, \
     adjustedaverage(units) average_units \
-    from weekly_sales group by whs, item, fiscal_year, fiscal_quarter, \
-    fiscal_period',
+    from weekly_sales group by whs, item, fiscal_year, fiscal_period',
     [],
     [analysis.AdjustedAverage]
 ).build()
