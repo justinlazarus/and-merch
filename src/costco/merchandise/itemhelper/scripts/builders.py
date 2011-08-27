@@ -2,6 +2,7 @@ import sqlite3
 import settings
 import legacy
 import inspect
+import pdb
 
 class View: 
     def __init__(self, table_name, view_group, required_tables, select):
@@ -26,10 +27,9 @@ class View:
 class SimpleView(View):
     def build(self):
         if View.build(self):
-            self.con.execute('drop view if exists %s' % (self.table_name))
-            self.con.execute('create view %s as %s' 
-                % (self.table_name, self.select)
-            )
+            self.cur.execute('drop table if exists %s' % (self.table_name))
+            query = 'create table %s as %s' % (self.table_name, self.select)
+            self.cur.execute(query)
  
 class UdfView(View):
     def __init__(
@@ -59,6 +59,24 @@ class UdfView(View):
             query = 'create table %s as %s' % (self.table_name, self.select)
             self.cur.execute(query)
 
+class Index:
+    """ Creates an index over an already created table"""
+    def __init__(self, index_name, table_name, fields):
+        self.con = sqlite3.connect(settings.DB_PATH)
+        self.cur = self.con.cursor()
+
+        self.index_name = index_name
+	self.table_name = table_name
+	self.fields = fields
+
+    def build(self):
+        self.cur.execute(
+            'create index %s on %s (%s)' % (
+                self.index_name, self.table_name, self.fields
+            )
+        )
+        print ('building index %s...' % self.index_name)
+        
 class AvailableViews:
     """ A list of views available for use in the android app."""
     def __init__(self, table_name=None, view_group=None):
@@ -80,3 +98,31 @@ class AvailableViews:
 
     def drop(self):
         self.con.execute('drop table if exists available_views')
+
+class AndroidMetadata:
+    def __init__(self, locale='en_US'):
+        self.locale = locale
+        self.con = sqlite3.connect(settings.DB_PATH)
+        self.cur = self.con.cursor()
+
+    def create(self):
+        self.cur.execute(
+            'create table if not exists android_metadata \
+             (locale text default "en_US")'
+        )
+
+    def drop(self):
+        self.cur.execute('drop table if exists android_metadata')
+   
+    def add(self):
+        pdb.set_trace()
+        query = (
+            "insert into android_metadata (locale) values ('%s')"
+            % (self.locale)
+        )
+        self.cur.execute(query)
+
+    def prepare(self):
+        self.drop()
+        self.create()
+        self.add()

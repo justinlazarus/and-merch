@@ -28,7 +28,7 @@ public class DetailFragment extends ListFragment {
 	@Override 
 	public void onActivityCreated(Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
-		setListAdapter(new DailySalesView(getSearchFilters(), getActivity()).getListAdapter());
+		setListAdapter(new DailySalesView().getListAdapter(getSearchFilters(), getActivity()));
 	}
 	
 	@Override 
